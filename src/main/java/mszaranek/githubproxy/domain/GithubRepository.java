@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
+import java.util.Objects;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class GithubRepository {
@@ -19,6 +20,16 @@ public class GithubRepository {
 
 
     private boolean isFork;
+
+    public GithubRepository(String name, String ownerLogin, List<Branch> branches, boolean isFork) {
+        this.name = name;
+        this.ownerLogin = ownerLogin;
+        this.branches = branches;
+        this.isFork = isFork;
+    }
+
+    public GithubRepository() {
+    }
 
     public String getName() {
         return name;
@@ -36,7 +47,6 @@ public class GithubRepository {
     public void setFork(boolean fork) {
         isFork = fork;
     }
-
 
     public String getOwnerLogin() {
         return ownerLogin;
@@ -61,5 +71,18 @@ public class GithubRepository {
 
     public void setBranches(List<Branch> branches) {
         this.branches = branches;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof GithubRepository)) return false;
+        GithubRepository that = (GithubRepository) o;
+        return isFork == that.isFork && Objects.equals(name, that.name) && Objects.equals(ownerLogin, that.ownerLogin) && Objects.equals(branches, that.branches);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, ownerLogin, owner, branches, isFork);
     }
 }

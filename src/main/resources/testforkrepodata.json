@@ -1,0 +1,32 @@
+[
+  {
+    "id": 1111111,
+    "node_id": "MDEwOlJldfgQrCgaXRvc38xNjIwODMzODc=",
+    "name": "testrepofork",
+    "full_name": "testuser2/testrepofork",
+    "private": false,
+    "owner": {
+      "login": "testuser2"
+    },
+    "fork": true,
+    "language": "Java",
+    "forks_count": 0,
+    "forks": 0,
+    "default_branch": "master"
+  },
+  {
+    "id": 222222,
+    "node_id": "MDEwOlJ11238CgaXRvc38xNjIwODMzODc=",
+    "name": "testrepofork",
+    "full_name": "testuser/testrepofork",
+    "private": false,
+    "owner": {
+      "login": "testuser2"
+    },
+    "fork": true,
+    "language": "Java",
+    "forks_count": 0,
+    "forks": 0,
+    "default_branch": "master"
+  }
+]

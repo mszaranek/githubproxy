@@ -1,8 +1,9 @@
 package mszaranek.githubproxy;
 
 
-import mszaranek.githubproxy.controller.GithubProxyController;
-import mszaranek.githubproxy.exception.CustomException;
+import mszaranek.githubproxy.domain.Branch;
+import mszaranek.githubproxy.domain.Commit;
+import mszaranek.githubproxy.domain.GithubRepository;
 import mszaranek.githubproxy.service.GithubBranchesService;
 import mszaranek.githubproxy.service.GithubRepositoryService;
 import mszaranek.githubproxy.service.impl.GithubBranchesServiceImpl;
@@ -16,23 +17,20 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
-import org.springframework.web.reactive.function.client.WebClientResponseException;
+
+import java.util.Arrays;
+import java.util.List;
 
 
 @SpringBootTest
-public class GithubProxyControllerTests {
-
-    final Logger logger = LoggerFactory.getLogger(GithubProxyControllerTests.class);
+public class GithubRepositoryServiceTests {
 
     private String baseUrl = "http://localhost:8082";
     private MockWebServer mockWebServer;
     private GithubRepositoryService githubproxyService;
-    private GithubProxyController githubProxyController;
 
     private GithubBranchesService githubBranchesService;
 
@@ -40,8 +38,9 @@ public class GithubProxyControllerTests {
     @BeforeEach
     void setupMockWebServer() throws Exception {
 
-        String testRepoData = new String(IOUtils.toByteArray(GithubProxyControllerTests.class.getClassLoader().getResourceAsStream("testrepodata.json")));
-        String testBranchData = new String(IOUtils.toByteArray(GithubProxyControllerTests.class.getClassLoader().getResourceAsStream("testbranchdata.json")));
+        String testRepoData = new String(IOUtils.toByteArray(GithubRepositoryServiceTests.class.getClassLoader().getResourceAsStream("testrepodata.json")));
+        String testRepoForkData = new String(IOUtils.toByteArray(GithubRepositoryServiceTests.class.getClassLoader().getResourceAsStream("testforkrepodata.json")));
+        String testBranchData = new String(IOUtils.toByteArray(GithubRepositoryServiceTests.class.getClassLoader().getResourceAsStream("testbranchdata.json")));
 
 
         mockWebServer = new MockWebServer();
@@ -51,14 +50,14 @@ public class GithubProxyControllerTests {
             @Override
             public MockResponse dispatch(RecordedRequest request) {
 
-                logger.debug(request.getPath());
 
                 switch (request.getPath()) {
                     case "/users/testuser/repos":
                         return new MockResponse().setResponseCode(200).setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody(testRepoData);
+                    case "/users/testuserfork/repos":
+                        return new MockResponse().setResponseCode(200).setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody(testRepoForkData);
                     case "/repos/testuser/testrepo/branches":
                         return new MockResponse().setResponseCode(200).setHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE).setBody(testBranchData);
-
                 }
                 return new MockResponse().setResponseCode(404);
             }
@@ -67,11 +66,8 @@ public class GithubProxyControllerTests {
 
         githubBranchesService = new GithubBranchesServiceImpl(baseUrl);
 
-        logger.info("baseURL: " + baseUrl);
 
         githubproxyService = new GithubRepositoryServiceImpl(githubBranchesService, baseUrl);
-
-        githubProxyController = new GithubProxyController(githubproxyService);
 
 
     }
@@ -82,36 +78,22 @@ public class GithubProxyControllerTests {
     }
 
     @Test
-    void testCorrectPath() throws Exception {
+    void testGetRepos() {
 
-        githubProxyController.getRepos("testuser", null).collectList().block();
+        Commit testCommit = new Commit("de64150bb6c78h5f0527b000aejb7e764bb6527d");
+        Branch testBranch = new Branch("master", testCommit.getSha(), testCommit);
+        GithubRepository testRepository = new GithubRepository("testrepo", "testuser", Arrays.asList(testBranch), false);
 
+        List<GithubRepository> repositories = githubproxyService.getRepos("testuser", null).collectList().block();
 
-        RecordedRequest request = mockWebServer.takeRequest();
-
-        logger.info(request.getPath());
-        Assertions.assertEquals(request.getMethod(), "GET");
-        Assertions.assertEquals(request.getPath(), "/users/testuser/repos");
-
-    }
-
-
-    @Test
-    void testUserNotFoundException() {
-
-        WebClientResponseException thrown = Assertions.assertThrows(WebClientResponseException.class, () -> {
-            githubProxyController.getRepos("notexist", null).collectList().block();
-        });
-        Assertions.assertEquals(404, thrown.getStatusCode().value());
+        Assertions.assertEquals(Arrays.asList(testRepository), repositories);
     }
 
     @Test
-    void testWrongAcceptHeaderException() {
+    void testGetReposEmptyWhenAllReposAreForks() {
 
-        CustomException thrown = Assertions.assertThrows(CustomException.class, () -> {
-            githubProxyController.getRepos("testuser", "application/xml").collectList().block();
-        });
-
-        Assertions.assertEquals("Wrong accept header, application/json or wildcard expected", thrown.getMessage());
+        List<GithubRepository> repositories = githubproxyService.getRepos("testuserfork", null).collectList().block();
+        Assertions.assertTrue(repositories.isEmpty());
     }
+
 }
